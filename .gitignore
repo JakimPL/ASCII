@@ -1,0 +1,8 @@
+obj/
+
+*.stash
+*.user
+*.autosave
+
+Makefile
+ASCII
