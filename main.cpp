@@ -7,6 +7,13 @@
 #include "src/Options.hpp"
 #include "src/RichText.hpp"
 
+#include "boost/program_options.hpp"
+namespace bpo = boost::program_options;
+
+#define PRINT(string) std::cout << string << std::endl
+#define HELP "A simple program for generating ASCII art. Usage:\n./ASCII [input]\nExample:\n./ASCII image.png\nOptions"
+#define VERSION "0.0.2"
+
 Bitmap convertToMono(sf::Image &image, double threshold = options.image.threshold, sf::Color realColor = sf::Color(options.characters.color), bool setPixels = false)
 {
 	unsigned short imageWidth  = image.getSize().x;
@@ -104,8 +111,58 @@ sf::Color getAverageColor(sf::Image &image)
 	return sf::Color(r / size, g / size, b / size);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+	bpo::options_description description(HELP);
+	description.add_options()
+	("help,h",                                   "Shows the help message")
+	("version,v",                                "Shows the version of the program")
+	("input,i",       bpo::value<std::string>(), "A path to the input image file");
+
+	bpo::variables_map variablesMap;
+	bpo::positional_options_description positionalOptionsDescription;
+	positionalOptionsDescription.add("input", 1);
+
+	try {
+		bpo::store(bpo::command_line_parser(argc, argv).options(description).positional(positionalOptionsDescription).run(), variablesMap);
+		bpo::notify(variablesMap);
+	} catch (std::exception &exception) {
+		PRINT("Command option error: " << exception.what());
+		return -2;
+	} catch (...) {
+		PRINT("Unknown error");
+		return -2;
+	}
+
+	bool exit = false;
+	if (variablesMap.count("help")) {
+		PRINT(description);
+		exit = true;
+	}
+
+	if (variablesMap.count("version")) {
+		PRINT("Version: " << VERSION);
+		exit = true;
+	}
+
+	std::string inputPath;
+	if (variablesMap.count("input")) {
+		inputPath = variablesMap["input"].as<std::string>();
+		std::fstream file(inputPath);
+		if (!file.good()) {
+			PRINT("Failed to load the input file!");
+			return -1;
+		}
+	} else {
+		PRINT(description << std::endl << "Version: " << VERSION);
+		return 1;
+	}
+
+
+	if (exit) {
+		return 1;
+	}
+
 	//options.save("options.ini");
 	options.load("options.ini");
 
@@ -117,7 +174,7 @@ int main()
 	sf::Font font;
 
 	font.loadFromFile("notomono.ttf");
-	image.loadFromFile("image.png");
+	image.loadFromFile(inputPath);
 	bitmap = convertToMono(image);
 	texture.loadFromImage(image);
 	sprite.setTexture(texture);
