@@ -66,7 +66,7 @@ unsigned long calculateDistance(const Bitmap &bitmap1, const Bitmap &bitmap2)
 	return distance;
 }
 
-char matchLetter(const Charmaps charmaps, Bitmap &fragment)
+wchar_t matchLetter(const Charmaps charmaps, Bitmap &fragment)
 {
 	size_t size = charmaps.size();
 	size_t id = 0;
@@ -126,7 +126,7 @@ int main()
 	options.screen.height = image.getSize().y;
 
 	sf::RenderWindow window(sf::VideoMode(options.screen.width, options.screen.height), "Dots");
-	Charmaps charmaps = createCharmaps(chars, font);
+	Charmaps charmaps = createCharmaps(options.characters.chars, font);
 
 	sfe::RichText text(font);
 	text.setCharacterSize(options.characters.size);

@@ -7,13 +7,14 @@
 
 namespace bpt = boost::property_tree;
 typedef std::vector<std::vector<bool>> Bitmap;
-typedef std::vector<char> Chars;
-typedef std::pair<char, Bitmap> Charmap;
+typedef std::vector<wchar_t> Chars;
+typedef std::pair<wchar_t, Bitmap> Charmap;
 typedef std::vector<Charmap> Charmaps;
 
 #define SCREEN_WIDTH    800
 #define SCREEN_HEIGHT   600
 
+#define CHARS           {' ', '.', 'X', '&', '|', '+', '$', '[', '=', 'o', '#', '!', '<'}
 #define CHAR_SIZE       13
 #define CHAR_WIDTH      8
 #define CHAR_HEIGHT     15
@@ -28,6 +29,7 @@ struct Options {
 		unsigned short height = SCREEN_HEIGHT;
 	} screen;
 	struct Characters {
+		Chars chars           = CHARS;
 		unsigned short size   = CHAR_SIZE;
 		unsigned short width  = CHAR_WIDTH;
 		unsigned short height = CHAR_HEIGHT;
@@ -43,6 +45,5 @@ struct Options {
 };
 
 static Options options;
-static const Chars chars = {' ', '.', 'X', '&', '|', '+', '$', '[', '=', 'o', '#', '!', '<'};
 
 #endif
