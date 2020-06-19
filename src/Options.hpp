@@ -1,44 +1,45 @@
 #ifndef OPTIONS_HPP
 #define OPTIONS_HPP
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/ini_parser.hpp>
-#include <SFML/Graphics.hpp>
+#include "main.hpp"
 
-namespace bpt = boost::property_tree;
-typedef std::vector<std::vector<bool>> Bitmap;
-typedef std::vector<wchar_t> Chars;
-typedef std::pair<wchar_t, Bitmap> Charmap;
-typedef std::vector<Charmap> Charmaps;
+#define COLORS_WEIGHTS_RED      0.30f
+#define COLORS_WEIGHTS_GREEN    0.59f
+#define COLORS_WEIGHTS_BLUE     0.11f
 
-#define SCREEN_WIDTH    800
-#define SCREEN_HEIGHT   600
+#define CHARS                   {' ', '.', ':', ';', 'o', 'x', '%', '#', '@'}
+#define CHAR_SIZE               13
+#define CHAR_WIDTH              8
+#define CHAR_HEIGHT             15
+#define CHAR_ANTIALIASING       false
 
-#define CHARS           {' ', '.', 'X', '&', '|', '+', '$', '[', '=', 'o', '#', '!', '<'}
-#define CHAR_SIZE       13
-#define CHAR_WIDTH      8
-#define CHAR_HEIGHT     15
-#define CHAR_COLOR      0xddbbcc
-#define CHAR_MONOSPACE  true
+#define IMAGE_BACKGROUND_COLOR "#000000"
 
-#define IMAGE_THRESHOLD 0.5f
+#define REGION_COLUMNS          3
+#define REGION_ROWS             3
+
+struct Color {
+	float red   = 0;
+	float green = 0;
+	float blue  = 0;
+};
 
 struct Options {
-	struct Screen {
-		unsigned short width  = SCREEN_WIDTH;
-		unsigned short height = SCREEN_HEIGHT;
-	} screen;
+	Color  colorsWeights               = {COLORS_WEIGHTS_RED, COLORS_WEIGHTS_GREEN, COLORS_WEIGHTS_BLUE};
 	struct Characters {
-		Chars chars           = CHARS;
-		unsigned short size   = CHAR_SIZE;
-		unsigned short width  = CHAR_WIDTH;
-		unsigned short height = CHAR_HEIGHT;
-		unsigned long  color  = CHAR_COLOR;
-		bool monospace        = CHAR_MONOSPACE;
+		CharacterList  chars           = CHARS;
+		unsigned short size            = CHAR_SIZE;
+		unsigned short width           = CHAR_WIDTH;
+		unsigned short height          = CHAR_HEIGHT;
+		bool           antialiasing    = CHAR_ANTIALIASING;
 	} characters;
 	struct Image {
-		double threshold      = IMAGE_THRESHOLD;
+		std::string    backgroundColor = IMAGE_BACKGROUND_COLOR;
 	} image;
+	struct Regions {
+		unsigned long  columns         = REGION_COLUMNS;
+		unsigned long  rows            = REGION_ROWS;
+	} regions;
 
 	void save(const std::string &filename);
 	void load(const std::string &filename);

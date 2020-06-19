@@ -1,12 +1,20 @@
 OBJECTS_DIR = ./obj
 
+#DEFINES += MAGICKCORE_HDRI_ENABLE=0
+DEFINES += MAGICKCORE_QUANTUM_DEPTH=16
+
 SOURCES += \
         main.cpp \
-	    src/Options.cpp \
-		src/RichText.cpp 
+		src/Functions.cpp \
+	    src/Options.cpp
 
 HEADERS += \
-		src/Options.hpp \
-		src/RichText.hpp
+		main.hpp \
+		src/Functions.hpp \
+		src/Options.hpp
+		
+INCLUDEPATH += /home/dev38/Biblioteki/ImageMagick/Magick++/lib/
+INCLUDEPATH += /home/dev38/Biblioteki/ImageMagick/
+INCLUDEPATH += /usr/include/ImageMagick-7/
 
-LIBS += -lboost_program_options -L/usr/lib -lsfml-audio -lsfml-graphics -lsfml-network -lsfml-system -lsfml-window
+LIBS += -lboost_program_options -lboost_filesystem -ljpeg -lpng -lMagick++-7.Q16HDRI
