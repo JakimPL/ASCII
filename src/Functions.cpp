@@ -33,7 +33,7 @@ Luma Functions::calculateLuma(const Magick::Image &image, unsigned long xOffset,
 	Luma luma;
 	for (unsigned int row = 0; row < options.regions.rows; ++row) {
 		for (unsigned int column = 0; column < options.regions.columns; ++column) {
-			double luminosity = Functions::getLuminosity(Functions::getAverageColor(image, xOffset + options.characters.width / 3 * column, yOffset + options.characters.height / 3 * row, options.characters.width / 3, options.characters.height / 3)) / 65536;
+			double luminosity = Functions::getLuminosity(Functions::getAverageColor(image, xOffset + options.characters.width / options.regions.columns * column, yOffset + options.characters.height / options.regions.rows * row, options.characters.width / options.regions.columns, options.characters.height / options.regions.rows)) / 65536;
 			luma.push_back(luminosity);
 		}
 	}
@@ -108,10 +108,10 @@ double Functions::getLuminosity(const Magick::Color &color)
 
 Magick::Image Functions::getASCII(const Magick::Image &image)
 {
+	CharactersLuminosity charactersLuminosity = Functions::calculateCharactersLuminosity();
 	Magick::Geometry geometry(image.columns(), image.rows());
 	Magick::Image newImage(geometry, options.image.backgroundColor);
 
-	newImage.fillColor("white");
 	newImage.strokeAntiAlias(false);
 	newImage.fontPointsize(options.characters.size);
 	newImage.font("notomono.ttf");
@@ -120,7 +120,6 @@ Magick::Image Functions::getASCII(const Magick::Image &image)
 	unsigned int rows    = image.rows()    / options.characters.height;
 	unsigned int yOffset = options.characters.size;
 
-	CharactersLuminosity charactersLuminosity = Functions::calculateCharactersLuminosity();
 
 	for (unsigned int x = 0; x < columns; ++x) {
 		for (unsigned int y = 0; y < rows; ++y) {
@@ -129,6 +128,8 @@ Magick::Image Functions::getASCII(const Magick::Image &image)
 			std::string letter;
 			letter += Functions::matchLetter(charactersLuminosity, luma);
 
+			Magick::Color newColor = Functions::getAverageColor(image, x * options.characters.width, y * options.characters.height, options.characters.width, options.characters.height);
+			newImage.fillColor(newColor);
 			newImage.draw(Magick::DrawableText(x * options.characters.width, y * options.characters.height + yOffset, letter));
 		}
 	}
