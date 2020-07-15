@@ -1,16 +1,21 @@
 OBJECTS_DIR = ./obj
 
-#DEFINES += MAGICKCORE_HDRI_ENABLE=0
+DEFINES += MAGICKCORE_HDRI_ENABLE 
 DEFINES += MAGICKCORE_QUANTUM_DEPTH=16
+DEFINES += LOG_LEVEL=2
 
 SOURCES += \
         main.cpp \
 		src/Functions.cpp \
+		src/ImageData.cpp \
+		src/Log.cpp \
 	    src/Options.cpp
 
 HEADERS += \
 		main.hpp \
 		src/Functions.hpp \
+		src/ImageData.hpp \
+		src/Log.hpp \
 		src/Options.hpp
 		
 INCLUDEPATH += /home/dev38/Biblioteki/ImageMagick/Magick++/lib/

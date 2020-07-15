@@ -5,6 +5,8 @@
 #include <sstream>
 #include <cmath>
 
+#include "src/Log.hpp"
+
 #include <Magick++/lib/Magick++.h>
 #include <MagickWand/MagickWand.h>
 #include <MagickCore/MagickCore.h>
@@ -19,10 +21,10 @@ namespace bpo = boost::program_options;
 namespace bpt = boost::property_tree;
 
 typedef std::vector<wchar_t> CharacterList;
-typedef std::vector<double> Luma;
-typedef std::vector<Luma> CharactersLuminosity;
+typedef std::vector<double> LumaVector;
+typedef std::vector<LumaVector> LumaGrid;
+typedef std::vector<std::vector<Magick::Color>> ColorGrid;
 
-#define PRINT(string) std::cout << string << std::endl
 #define FULL_IMAGE(image) 0, 0, image.columns(), image.rows()
 #define HELP "A simple program for generating ASCII art. Usage:\n./ASCII [input] [output]\nExample:\n./ASCII image.png image_output.png\nOptions"
 #define VERSION "0.1.0"

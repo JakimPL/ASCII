@@ -4,6 +4,7 @@ obj/
 *.user
 *.autosave
 *.png
+*.log
 
 Makefile
 ASCII
