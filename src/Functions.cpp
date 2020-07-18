@@ -7,7 +7,8 @@ bpo::options_description Functions::addProgramDescription()
 	("help,h",                                   "Shows the help message")
 	("version,v",                                "Shows the version of the program")
 	("input,i",       bpo::value<std::string>(), "A path to the input image file")
-	("output,o",      bpo::value<std::string>(), "A path to the output image file");
+	("output,o",      bpo::value<std::string>(), "A path to the output image file")
+	("threshold,t",   bpo::value<double>(),      "The threshold of the algorithm (a value from 0 to 1)");
 
 	return description;
 }
@@ -17,11 +18,20 @@ ImageData Functions::analyzeImage(Magick::Image &image, const CharactersData &ch
 	unsigned int columns  = image.columns() / options.characters.width;
 	unsigned int rows     = image.rows()    / options.characters.height;
 
-	_LogInfo("Analyzing the image: " + std::to_string(columns) + "x" + std::to_string(rows) + "...")
+	_LogInfo("Analyzing the image: " + std::to_string(columns) + "x" + std::to_string(rows));
+
 	ImageData imageData(columns, rows);
+
+	Magick::Image monoImage;
+	if (options.image.useMono) {
+		monoImage = Functions::makeMonochromatic(image);
+	}
 	for (unsigned int column = 0; column < columns; ++column) {
 		for (unsigned int row = 0; row < rows; ++row) {
-			ImageCell imageCell = Functions::analyzeRegion(image, column, row, charactersData);
+			LumaGrid      lumaGrid  = Functions::calculateLumaGrid(options.image.useMono ? monoImage : image, column, row);
+			Magick::Color color     = Functions::calculateAverageColor(image, column, row);
+			wchar_t       letter    = Functions::matchLetter(charactersData, lumaGrid);
+			ImageCell     imageCell = ImageCell(lumaGrid, color, letter);
 			imageData.setCell(column, row, imageCell);
 		}
 	}
@@ -31,15 +41,43 @@ ImageData Functions::analyzeImage(Magick::Image &image, const CharactersData &ch
 	return imageData;
 }
 
-ImageCell Functions::analyzeRegion(Magick::Image &image, unsigned int column, unsigned int row, bool analyzeColor)
+Magick::Color Functions::calculateAverageColor(Magick::Image &image, unsigned int column, unsigned int row)
 {
 	Magick::Geometry geometry(image.columns(), image.rows());
 	Magick::Quantum *pixels = image.getPixels(0, 0, geometry.width(), geometry.height());
 
 	unsigned int channels = image.channels();
-	unsigned long offset = channels * (row * geometry.width() * options.characters.height + column * options.characters.width);
+	unsigned long offset  = channels * (row * geometry.width() * options.characters.height + column * options.characters.width);
 
 	Color averageColor = {0, 0, 0};
+	for (unsigned int x = 0; x < options.characters.width; ++x) {
+		for (unsigned int y = 0; y < options.characters.height; ++y) {
+			unsigned long position = offset + channels * (y * geometry.width() + x);
+			Color color = {pixels[position], pixels[position + 1], pixels[position + 2]};
+			averageColor.red   += color.red;
+			averageColor.green += color.green;
+			averageColor.blue  += color.blue;
+		}
+	}
+
+	averageColor.red   /= options.cellSize();
+	averageColor.green /= options.cellSize();
+	averageColor.blue  /= options.cellSize();
+
+	unsigned long depth = 1 << image.depth();
+	double lumaModifier = sqrt(Functions::getLuminosity(averageColor)) / depth;
+	Magick::Color color = Magick::Color(averageColor.red / lumaModifier, averageColor.green / lumaModifier, averageColor.blue / lumaModifier);
+	return color;
+}
+
+LumaGrid Functions::calculateLumaGrid(Magick::Image &image, unsigned int column, unsigned int row)
+{
+	Magick::Geometry geometry(image.columns(), image.rows());
+	Magick::Quantum *pixels = image.getPixels(0, 0, geometry.width(), geometry.height());
+
+	unsigned int channels = image.channels();
+	unsigned long offset  = channels * (row * geometry.width() * options.characters.height + column * options.characters.width);
+
 	LumaGrid lumaGrid;
 	lumaGrid.resize(options.regions.columns, LumaVector(options.regions.rows, 0));
 	for (unsigned int x = 0; x < options.characters.width; ++x) {
@@ -47,13 +85,11 @@ ImageCell Functions::analyzeRegion(Magick::Image &image, unsigned int column, un
 			unsigned int c = x / options.regions.columns;
 			unsigned int r = y / options.regions.rows;
 			unsigned long position = offset + channels * (y * geometry.width() + x);
-			Color color = {pixels[position], pixels[position + 1], pixels[position + 2]};
-			lumaGrid[c][r] += Functions::getLuminosity(color);
-
-			if (analyzeColor) {
-				averageColor.red   += color.red;
-				averageColor.green += color.green;
-				averageColor.blue  += color.blue;
+			if (channels < 3) {
+				lumaGrid[c][r] += pixels[position];
+			} else {
+				Color color = {pixels[position], pixels[position + 1], pixels[position + 2]};
+				lumaGrid[c][r] += Functions::getLuminosity(color);
 			}
 		}
 	}
@@ -64,38 +100,18 @@ ImageCell Functions::analyzeRegion(Magick::Image &image, unsigned int column, un
 		}
 	}
 
-	if (analyzeColor) {
-		averageColor.red   /= options.cellSize();
-		averageColor.green /= options.cellSize();
-		averageColor.blue  /= options.cellSize();
-		double lumaModifier = sqrt(Functions::getLuminosity(averageColor) / DEPTH);
-		Magick::Color color = Magick::Color(averageColor.red / lumaModifier, averageColor.green / lumaModifier, averageColor.blue / lumaModifier);
-		return ImageCell(lumaGrid, color, ' ');
-	} else {
-		return ImageCell(lumaGrid, "white", ' ');
-	}
-}
-
-ImageCell Functions::analyzeRegion(Magick::Image &image, unsigned int column, unsigned int row, const CharactersData &charactersData)
-{
-	ImageCell imageCell = Functions::analyzeRegion(image, column, row, true);
-	LumaGrid lumaGrid = imageCell.getLumaGrid();
-	wchar_t letter = Functions::matchLetter(charactersData, lumaGrid);
-	imageCell.setLetter(letter);
-
-	return imageCell;
+	return lumaGrid;
 }
 
 CharactersData Functions::calculateCharactersData()
 {
 	_LogInfo("Analyzing characters data...");
 	CharactersData charactersData;
-	Magick::Color color = Magick::Color(1.0f, 1.0f, 1.0f);
 	for (size_t character = 0; character < options.characters.chars.size(); ++character) {
-		wchar_t letter = options.characters.chars[character];
-		Magick::Image letterImage = Functions::getLetterImage(letter);
-		ImageCell characterData = Functions::analyzeRegion(letterImage, 0, 0);
-		characterData.setLetter(letter);
+		wchar_t       letter        = options.characters.chars[character];
+		Magick::Image letterImage   = Functions::getLetterImage(letter);
+		LumaGrid      lumaGrid      = Functions::calculateLumaGrid(letterImage, 0, 0);
+		CharacterData characterData = CharacterData(lumaGrid, "white", letter);
 		charactersData[letter] = characterData;
 	}
 
@@ -111,6 +127,10 @@ CharactersList Functions::convertStringToChars(const std::string &chars)
 		CharactersList.push_back(chars[character]);
 	}
 
+	if (std::find(CharactersList.begin(), CharactersList.end(), ' ') == CharactersList.end()) {
+		CharactersList.push_back(' ');
+	}
+
 	return CharactersList;
 }
 
@@ -124,23 +144,27 @@ std::string Functions::convertCharsToString(const CharactersList &chars)
 	return output;
 }
 
-Magick::Image Functions::drawOutput(const ImageData &imageData)
+Magick::Image Functions::drawOutput(const ImageData &imageData, std::string &outputString)
 {
+	_LogInfo("Creating an output image");
 	Magick::Image newImage(Magick::Geometry(imageData.columns * options.characters.width, imageData.rows * options.characters.height), options.image.backgroundColor);
 	newImage.strokeAntiAlias(options.characters.antialiasing);
 	newImage.fontPointsize(options.characters.size);
 	newImage.font("notomono.ttf");
 
 	unsigned int yOffset = options.characters.size;
-	for (unsigned int column = 0; column < imageData.columns; ++column) {
-		for (unsigned int row = 0; row < imageData.rows; ++row) {
+	for (unsigned int row = 0; row < imageData.rows; ++row) {
+		for (unsigned int column = 0; column < imageData.columns; ++column) {
 			std::string outputLetter;
 			outputLetter += imageData[column][row].second;
+			outputString += imageData[column][row].second;
 			newImage.fillColor(imageData[column][row].first);
 			newImage.draw(Magick::DrawableText(column * options.characters.width, row * options.characters.height + yOffset, outputLetter));
 		}
+		outputString += "\n";
 	}
 
+	_LogInfo("Succesfully created the output image");
 	return newImage;
 }
 
@@ -150,6 +174,7 @@ Magick::Image Functions::getLetterImage(wchar_t letter)
 	std::string letterString;
 	letterString += letter;
 
+	letterImage.type(Magick::GrayscaleType);
 	letterImage.fillColor("white");
 	letterImage.strokeAntiAlias(options.characters.antialiasing);
 	letterImage.fontPointsize(options.characters.size);
@@ -194,20 +219,40 @@ void Functions::loadOptions()
 	}
 }
 
-Magick::Image Functions::makeASCII(Magick::Image &image)
+Magick::Image Functions::makeASCII(Magick::Image &image, std::string &outputString)
 {
 	CharactersData charactersData = Functions::calculateCharactersData();
-	ImageData imageData = Functions::analyzeImage(image, charactersData);
-	Magick::Image outputImage = Functions::drawOutput(imageData);
+	ImageData      imageData      = Functions::analyzeImage(image, charactersData);
+	Magick::Image  outputImage    = Functions::drawOutput(imageData, outputString);
 
 	_LogInfo("Succesfully converted the image");
-
 	return outputImage;
 }
 
-wchar_t Functions::matchLetter(const CharactersData &charactersData, const LumaGrid &luma)
+Magick::Image Functions::makeMonochromatic(Magick::Image &image, double threshold)
 {
-	double minDistance = 0;
+	_LogInfo("Creating a monochromatic image");
+	Magick::Image monoImage(image);
+	monoImage.type(Magick::GrayscaleType);
+
+	Magick::Quantum *pixels = monoImage.getPixels(0, 0, monoImage.columns(), monoImage.rows());
+
+	unsigned int channels = monoImage.channels();
+	for (unsigned int x = 0; x < monoImage.columns(); ++x) {
+		for (unsigned int y = 0; y < monoImage.rows(); ++y) {
+			unsigned long position = channels * (x + monoImage.columns() * y);
+			pixels[position] = (pixels[position] > threshold * DEPTH ? DEPTH : 0);
+		}
+	}
+
+	_LogInfo("Successfully created a monochromatic image");
+
+	return monoImage;
+}
+
+wchar_t Functions::matchLetter(const CharactersData &charactersData, const LumaGrid &lumaGrid)
+{
+	double minDistance = DBL_MAX;
 	wchar_t letter = ' ';
 
 	for (const auto &character : charactersData) {
@@ -215,11 +260,11 @@ wchar_t Functions::matchLetter(const CharactersData &charactersData, const LumaG
 		CharacterData characterData = character.second;
 		for (unsigned int row = 0; row < options.regions.rows; ++row) {
 			for (unsigned int column = 0; column < options.regions.columns; ++column) {
-				distance += square(luma[column][row] - characterData[column][row]);
+				distance += square(lumaGrid[column][row] - characterData[column][row]);
 			}
 		}
 
-		if (distance < minDistance or minDistance == 0) {
+		if (distance <= minDistance) {
 			minDistance = distance;
 			letter = character.first;
 		}
@@ -265,6 +310,11 @@ int Functions::parseProgramArguments(int argc, char *argv[], std::string &inputP
 	} else {
 		PRINT(description << std::endl << "Version: " << VERSION);
 		return 1;
+	}
+
+	if (variablesMap.count("threshold")) {
+		options.image.threshold = variablesMap["threshold"].as<double>();
+		options.image.useMono = true;
 	}
 
 	if (exit) {

@@ -12,9 +12,12 @@ int main(int argc, char *argv[])
 	Magick::InitializeMagick(*argv);
 	Magick::Image image;
 
+	std::string outputString;
 	Functions::readImage(image, inputPath);
-	Magick::Image newImage = Functions::makeASCII(image);
+	Magick::Image newImage = Functions::makeASCII(image, outputString);
 	Functions::writeImage(newImage, outputPath);
+
+	PRINT("Output:\n" << outputString);
 
 	return returnValue;
 }

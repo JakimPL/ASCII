@@ -10,17 +10,18 @@ namespace Functions
 
 bpo::options_description addProgramDescription();
 ImageData analyzeImage(Magick::Image &image, const CharactersData &charactersData);
-ImageCell analyzeRegion(Magick::Image &image, unsigned int column, unsigned int row, const CharactersData &charactersData);
-ImageCell analyzeRegion(Magick::Image &image, unsigned int column, unsigned int row, bool analyzeColor = false);
+Magick::Color calculateAverageColor(Magick::Image &image, unsigned int column, unsigned int row);
+LumaGrid calculateLumaGrid(Magick::Image &image, unsigned int column, unsigned int row);
 CharactersData calculateCharactersData();
 std::string convertCharsToString(const CharactersList &chars);
 CharactersList convertStringToChars(const std::string &chars);
-Magick::Image drawOutput(const ImageData &imageData);
+Magick::Image drawOutput(const ImageData &imageData, std::string &outputString);
 Magick::Image getLetterImage(wchar_t letter);
 bpo::variables_map getVariablesMap(bpo::options_description description, int argc, char *argv[]);
 void loadOptions();
-Magick::Image makeASCII(Magick::Image &image);
-wchar_t matchLetter(const CharactersData &charactersData, const LumaGrid &luma);
+Magick::Image makeASCII(Magick::Image &image, std::string &outputString);
+Magick::Image makeMonochromatic(Magick::Image &image, double threshold = options.image.threshold);
+wchar_t matchLetter(const CharactersData &charactersData, const LumaGrid &lumaGrid);
 int parseProgramArguments(int argc, char *argv[], std::string &inputPath, std::string &outputPath);
 void readImage(Magick::Image &image, const std::string &inputPath);
 void writeImage(Magick::Image &image, const std::string &outputPath);

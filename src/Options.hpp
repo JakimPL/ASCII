@@ -14,6 +14,8 @@
 #define CHAR_ANTIALIASING       false
 
 #define IMAGE_BACKGROUND_COLOR "#000000"
+#define IMAGE_USE_MONO          false
+#define IMAGE_THRESHOLD         0.5f
 
 #define REGION_COLUMNS          3
 #define REGION_ROWS             4
@@ -31,6 +33,8 @@ struct Options {
 	} characters;
 	struct Image {
 		std::string    backgroundColor = IMAGE_BACKGROUND_COLOR;
+		bool           useMono         = IMAGE_USE_MONO;
+		double         threshold       = IMAGE_THRESHOLD;
 	} image;
 	struct Regions {
 		unsigned long  columns         = REGION_COLUMNS;

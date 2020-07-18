@@ -13,6 +13,8 @@ void Options::save(const std::string &filename)
 	pt.add("characters.height",       characters.height);
 	pt.add("characters.antialiasing", characters.antialiasing);
 	pt.add("image.backgroundColor",   image.backgroundColor);
+	pt.add("image.useMono",         image.useMono);
+	pt.add("image.threshold",         image.threshold);
 	pt.add("regions.columns",         regions.columns);
 	pt.add("regions.rows",            regions.rows);
 	write_ini(filename, pt);
@@ -31,6 +33,8 @@ void Options::load(const std::string &filename)
 	characters.height       = pt.get<unsigned short>("characters.height");
 	characters.antialiasing = pt.get<bool>("characters.antialiasing");
 	image.backgroundColor   = pt.get<std::string>("image.backgroundColor");
+	image.useMono           = pt.get<bool>("image.useMono");
+	image.threshold         = pt.get<float>("image.threshold");
 	regions.columns         = pt.get<unsigned int>("regions.columns");
 	regions.rows            = pt.get<unsigned int>("regions.rows");
 }
