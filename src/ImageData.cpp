@@ -1,37 +1,24 @@
 #include "ImageData.hpp"
-#include "Functions.hpp"
 
-ImageData::ImageData(unsigned c, unsigned r)
+ImageData::ImageData(unsigned int c, unsigned int r)
 {
 	mColumns = c;
 	mRows = r;
 
-	totalLuma = 0;
-	lumaGrid.resize(mRows);
-	colorGrid.resize(mRows);
-
-	for (size_t row = 0; row < mRows; ++row) {
-		lumaGrid[row].resize(mColumns);
-		colorGrid[row].resize(mColumns);
+	asciiData.resize(mColumns);
+	for (size_t column = 0; column < mColumns; ++column) {
+		asciiData[column].resize(mRows);
 	}
 }
 
-void ImageData::calculateLuma(const Magick::Image &letterImage)
+void ImageData::setCell(unsigned int column, unsigned int row, ImageCell imageCell)
 {
-	lumaGrid = Functions::calculateLuma(letterImage);
+	asciiData[column][row].first  = imageCell.getColor();
+	asciiData[column][row].second = imageCell.getLetter();
 }
 
-double ImageData::getLuma(unsigned int row, unsigned int column)
+void ImageData::setCell(unsigned int column, unsigned int row, Magick::Color color, wchar_t letter)
 {
-	return lumaGrid[row][column];
-}
-
-wchar_t ImageData::getLetter()
-{
-	return letter;
-}
-
-void ImageData::setLetter(wchar_t l)
-{
-	letter = l;
+	asciiData[column][row].first  = color;
+	asciiData[column][row].second = letter;
 }

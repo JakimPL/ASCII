@@ -8,12 +8,13 @@ int main(int argc, char *argv[])
 	Functions::loadOptions();
 	std::string inputPath, outputPath;
 	int returnValue = Functions::parseProgramArguments(argc, argv, inputPath, outputPath);
+
 	Magick::InitializeMagick(*argv);
 	Magick::Image image;
 
 	Functions::readImage(image, inputPath);
-	Magick::Image newImage = Functions::getASCII(image);
-	newImage.write(outputPath);
+	Magick::Image newImage = Functions::makeASCII(image);
+	Functions::writeImage(newImage, outputPath);
 
 	return returnValue;
 }

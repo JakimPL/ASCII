@@ -1,43 +1,55 @@
 #ifndef FUNCTIONS_HPP
 #define FUNCTIONS_HPP
 
-#include "ImageData.hpp"
+#include "main.hpp"
 #include "Options.hpp"
-
-typedef std::vector<ImageData> CharactersData;
+#include "ImageData.hpp"
 
 namespace Functions
 {
 
 bpo::options_description addProgramDescription();
+ImageData analyzeImage(Magick::Image &image, const CharactersData &charactersData);
+ImageCell analyzeRegion(Magick::Image &image, unsigned int column, unsigned int row, const CharactersData &charactersData);
+ImageCell analyzeRegion(Magick::Image &image, unsigned int column, unsigned int row, bool analyzeColor = false);
 CharactersData calculateCharactersData();
-LumaGrid calculateLuma(const Magick::Image &image);
-LumaGrid calculateLuma(const Magick::Image &image, unsigned long xOffset, unsigned long yOffset);
-std::string convertCharsToString(const CharacterList &chars);
-CharacterList convertStringToChars(const std::string &chars);
-Magick::Image getASCII(const Magick::Image &image);
-Magick::Color getAverageColor(const Magick::Image &image);
-Magick::Color getAverageColor(const Magick::Image &image, unsigned int xstart, unsigned int ystart, unsigned int width, unsigned int height);
+std::string convertCharsToString(const CharactersList &chars);
+CharactersList convertStringToChars(const std::string &chars);
+Magick::Image drawOutput(const ImageData &imageData);
 Magick::Image getLetterImage(wchar_t letter);
-double getLuminosity(const Magick::Color &color);
 bpo::variables_map getVariablesMap(bpo::options_description description, int argc, char *argv[]);
 void loadOptions();
+Magick::Image makeASCII(Magick::Image &image);
 wchar_t matchLetter(const CharactersData &charactersData, const LumaGrid &luma);
 int parseProgramArguments(int argc, char *argv[], std::string &inputPath, std::string &outputPath);
 void readImage(Magick::Image &image, const std::string &inputPath);
+void writeImage(Magick::Image &image, const std::string &outputPath);
+
+inline double getLuminosity(double red, double green, double blue)
+{
+	return options.colorsWeights.red   * red   +
+		   options.colorsWeights.green * green +
+		   options.colorsWeights.blue  * blue;
+}
+inline double getLuminosity(const Color &color)
+{
+	return options.colorsWeights.red   * color.red   +
+		   options.colorsWeights.green * color.green +
+		   options.colorsWeights.blue  * color.blue;
+}
+
+inline double getLuminosity(const Magick::Color &color)
+{
+	return options.colorsWeights.red   * color.quantumRed()   +
+		   options.colorsWeights.green * color.quantumGreen() +
+		   options.colorsWeights.blue  * color.quantumBlue();
+}
 
 template <typename Type>
 inline double square(Type x)
 {
 	return x * x;
 }
-
-/*template <typename Type>
-Type sum(const std::vector<Type> &vector);
-
-template <typename Type>
-Type sum(const std::vector<std::vector<Type>> &grid);
-*/
 
 }
 

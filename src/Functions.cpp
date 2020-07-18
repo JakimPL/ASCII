@@ -12,56 +12,109 @@ bpo::options_description Functions::addProgramDescription()
 	return description;
 }
 
+ImageData Functions::analyzeImage(Magick::Image &image, const CharactersData &charactersData)
+{
+	unsigned int columns  = image.columns() / options.characters.width;
+	unsigned int rows     = image.rows()    / options.characters.height;
+
+	_LogInfo("Analyzing the image: " + std::to_string(columns) + "x" + std::to_string(rows) + "...")
+	ImageData imageData(columns, rows);
+	for (unsigned int column = 0; column < columns; ++column) {
+		for (unsigned int row = 0; row < rows; ++row) {
+			ImageCell imageCell = Functions::analyzeRegion(image, column, row, charactersData);
+			imageData.setCell(column, row, imageCell);
+		}
+	}
+
+	_LogInfo("Succesfully analyzed the image");
+
+	return imageData;
+}
+
+ImageCell Functions::analyzeRegion(Magick::Image &image, unsigned int column, unsigned int row, bool analyzeColor)
+{
+	Magick::Geometry geometry(image.columns(), image.rows());
+	Magick::Quantum *pixels = image.getPixels(0, 0, geometry.width(), geometry.height());
+
+	unsigned int channels = image.channels();
+	unsigned long offset = channels * (row * geometry.width() * options.characters.height + column * options.characters.width);
+
+	Color averageColor = {0, 0, 0};
+	LumaGrid lumaGrid;
+	lumaGrid.resize(options.regions.columns, LumaVector(options.regions.rows, 0));
+	for (unsigned int x = 0; x < options.characters.width; ++x) {
+		for (unsigned int y = 0; y < options.characters.height; ++y) {
+			unsigned int c = x / options.regions.columns;
+			unsigned int r = y / options.regions.rows;
+			unsigned long position = offset + channels * (y * geometry.width() + x);
+			Color color = {pixels[position], pixels[position + 1], pixels[position + 2]};
+			lumaGrid[c][r] += Functions::getLuminosity(color);
+
+			if (analyzeColor) {
+				averageColor.red   += color.red;
+				averageColor.green += color.green;
+				averageColor.blue  += color.blue;
+			}
+		}
+	}
+
+	for (unsigned int c = 0; c < options.regions.columns; ++c) {
+		for (unsigned int r = 0; r < options.regions.rows; ++r) {
+			lumaGrid[c][r] /= options.regionSize() * DEPTH;
+		}
+	}
+
+	if (analyzeColor) {
+		averageColor.red   /= options.cellSize();
+		averageColor.green /= options.cellSize();
+		averageColor.blue  /= options.cellSize();
+		double lumaModifier = sqrt(Functions::getLuminosity(averageColor) / DEPTH);
+		Magick::Color color = Magick::Color(averageColor.red / lumaModifier, averageColor.green / lumaModifier, averageColor.blue / lumaModifier);
+		return ImageCell(lumaGrid, color, ' ');
+	} else {
+		return ImageCell(lumaGrid, "white", ' ');
+	}
+}
+
+ImageCell Functions::analyzeRegion(Magick::Image &image, unsigned int column, unsigned int row, const CharactersData &charactersData)
+{
+	ImageCell imageCell = Functions::analyzeRegion(image, column, row, true);
+	LumaGrid lumaGrid = imageCell.getLumaGrid();
+	wchar_t letter = Functions::matchLetter(charactersData, lumaGrid);
+	imageCell.setLetter(letter);
+
+	return imageCell;
+}
+
 CharactersData Functions::calculateCharactersData()
 {
+	_LogInfo("Analyzing characters data...");
 	CharactersData charactersData;
+	Magick::Color color = Magick::Color(1.0f, 1.0f, 1.0f);
 	for (size_t character = 0; character < options.characters.chars.size(); ++character) {
-		ImageData imageData(1, 1);
-
 		wchar_t letter = options.characters.chars[character];
-
 		Magick::Image letterImage = Functions::getLetterImage(letter);
-		imageData.calculateLuma(letterImage);
-
-		imageData.setLetter(letter);
-		charactersData.push_back(imageData);
+		ImageCell characterData = Functions::analyzeRegion(letterImage, 0, 0);
+		characterData.setLetter(letter);
+		charactersData[letter] = characterData;
 	}
+
+	_LogInfo("Characters data analyzed successfully");
 
 	return charactersData;
 }
 
-LumaGrid Functions::calculateLuma(const Magick::Image &image, unsigned long xOffset, unsigned long yOffset)
+CharactersList Functions::convertStringToChars(const std::string &chars)
 {
-	LumaGrid luma;
-	for (unsigned int row = 0; row < options.regions.rows; ++row) {
-		LumaVector lumaVector;
-		for (unsigned int column = 0; column < options.regions.columns; ++column) {
-			double luminosity = Functions::getLuminosity(Functions::getAverageColor(image, xOffset + options.characters.width / options.regions.columns * column, yOffset + options.characters.height / options.regions.rows * row, options.characters.width / options.regions.columns, options.characters.height / options.regions.rows)) / 65536;
-			lumaVector.push_back(luminosity);
-		}
-
-		luma.push_back(lumaVector);
-	}
-
-	return luma;
-}
-
-LumaGrid Functions::calculateLuma(const Magick::Image &image)
-{
-	return Functions::calculateLuma(image, 0, 0);
-}
-
-CharacterList Functions::convertStringToChars(const std::string &chars)
-{
-	CharacterList characterList;
+	CharactersList CharactersList;
 	for (size_t character = 0; character < chars.size(); ++character) {
-		characterList.push_back(chars[character]);
+		CharactersList.push_back(chars[character]);
 	}
 
-	return characterList;
+	return CharactersList;
 }
 
-std::string Functions::convertCharsToString(const CharacterList &chars)
+std::string Functions::convertCharsToString(const CharactersList &chars)
 {
 	std::string output;
 	for (size_t character = 0; character < chars.size(); ++character) {
@@ -71,57 +124,24 @@ std::string Functions::convertCharsToString(const CharacterList &chars)
 	return output;
 }
 
-Magick::Image Functions::getASCII(const Magick::Image &image)
+Magick::Image Functions::drawOutput(const ImageData &imageData)
 {
-	CharactersData charactersData = Functions::calculateCharactersData();
-	Magick::Geometry geometry(image.columns(), image.rows());
-	Magick::Image newImage(geometry, options.image.backgroundColor);
-
-	newImage.strokeAntiAlias(false);
+	Magick::Image newImage(Magick::Geometry(imageData.columns * options.characters.width, imageData.rows * options.characters.height), options.image.backgroundColor);
+	newImage.strokeAntiAlias(options.characters.antialiasing);
 	newImage.fontPointsize(options.characters.size);
 	newImage.font("notomono.ttf");
 
-	unsigned int columns = image.columns() / options.characters.width;
-	unsigned int rows    = image.rows()    / options.characters.height;
 	unsigned int yOffset = options.characters.size;
-
-	ImageData imageData(columns, rows);
-	for (unsigned int x = 0; x < columns; ++x) {
-		for (unsigned int y = 0; y < rows; ++y) {
-			LumaGrid luma = Functions::calculateLuma(image, x * options.characters.width, y * options.characters.height);
-
-			std::string letter;
-			letter += Functions::matchLetter(charactersData, luma);
-
-			Magick::Color newColor = Functions::getAverageColor(image, x * options.characters.width, y * options.characters.height, options.characters.width, options.characters.height);
-			newImage.fillColor(newColor);
-			newImage.draw(Magick::DrawableText(x * options.characters.width, y * options.characters.height + yOffset, letter));
+	for (unsigned int column = 0; column < imageData.columns; ++column) {
+		for (unsigned int row = 0; row < imageData.rows; ++row) {
+			std::string outputLetter;
+			outputLetter += imageData[column][row].second;
+			newImage.fillColor(imageData[column][row].first);
+			newImage.draw(Magick::DrawableText(column * options.characters.width, row * options.characters.height + yOffset, outputLetter));
 		}
 	}
 
-	_LogInfo("Succesfully converted an image")
 	return newImage;
-}
-
-Magick::Color Functions::getAverageColor(const Magick::Image &image, unsigned int xstart, unsigned int ystart, unsigned int width, unsigned int height)
-{
-	Color meanColor;
-	unsigned long size = width * height;
-	for (unsigned int column = xstart; column - xstart < width; ++column) {
-		for (unsigned int row = ystart; row - ystart < height; ++row) {
-			Magick::Color pixelColor = image.pixelColor(column, row);
-			meanColor.red += pixelColor.quantumRed();
-			meanColor.green += pixelColor.quantumGreen();
-			meanColor.blue += pixelColor.quantumBlue();
-		}
-	}
-
-	return Magick::Color(meanColor.red / size, meanColor.green / size, meanColor.blue / size);
-}
-
-Magick::Color Functions::getAverageColor(const Magick::Image &image)
-{
-	return getAverageColor(image, FULL_IMAGE(image));
 }
 
 Magick::Image Functions::getLetterImage(wchar_t letter)
@@ -139,12 +159,6 @@ Magick::Image Functions::getLetterImage(wchar_t letter)
 	return letterImage;
 }
 
-double Functions::getLuminosity(const Magick::Color &color)
-{
-	return options.colorsWeights.red   * color.quantumRed()   +
-		   options.colorsWeights.green * color.quantumGreen() +
-		   options.colorsWeights.blue  * color.quantumBlue();
-}
 
 bpo::variables_map Functions::getVariablesMap(bpo::options_description description, int argc, char *argv[])
 {
@@ -180,23 +194,34 @@ void Functions::loadOptions()
 	}
 }
 
+Magick::Image Functions::makeASCII(Magick::Image &image)
+{
+	CharactersData charactersData = Functions::calculateCharactersData();
+	ImageData imageData = Functions::analyzeImage(image, charactersData);
+	Magick::Image outputImage = Functions::drawOutput(imageData);
+
+	_LogInfo("Succesfully converted the image");
+
+	return outputImage;
+}
 
 wchar_t Functions::matchLetter(const CharactersData &charactersData, const LumaGrid &luma)
 {
 	double minDistance = 0;
 	wchar_t letter = ' ';
 
-	for (ImageData character : charactersData) {
+	for (const auto &character : charactersData) {
 		double distance = 0;
+		CharacterData characterData = character.second;
 		for (unsigned int row = 0; row < options.regions.rows; ++row) {
 			for (unsigned int column = 0; column < options.regions.columns; ++column) {
-				distance += square(luma[column][row] - character.getLuma(column, row));
+				distance += square(luma[column][row] - characterData[column][row]);
 			}
 		}
 
 		if (distance < minDistance or minDistance == 0) {
 			minDistance = distance;
-			letter = character.getLetter();
+			letter = character.first;
 		}
 	}
 
@@ -254,6 +279,16 @@ void Functions::readImage(Magick::Image &image, const std::string &inputPath)
 	try {
 		image.read(inputPath);
 		_LogInfo("Succesfully read " + inputPath + " file");
+	} catch (Magick::Exception &exception) {
+		_LogError(exception.what());
+	}
+}
+
+void Functions::writeImage(Magick::Image &image, const std::string &outputPath)
+{
+	try {
+		image.write(outputPath);
+		_LogInfo("Succesfully saved " + outputPath + " file");
 	} catch (Magick::Exception &exception) {
 		_LogError(exception.what());
 	}

@@ -7,31 +7,28 @@
 #include <MagickWand/MagickWand.h>
 #include <MagickCore/MagickCore.h>
 
-#include "main.hpp"
+#include "ImageCell.hpp"
 
 class ImageData
 {
 public:
-	ImageData(unsigned c, unsigned r);
-
-public:
+	ASCIIData asciiData;
 	const unsigned int &columns = mColumns;
 	const unsigned int &rows = mRows;
 private:
-	wchar_t letter;
-
 	unsigned int mColumns;
 	unsigned int mRows;
 
-	double totalLuma;
-	LumaGrid lumaGrid;
-	ColorGrid colorGrid;
 public:
-	void calculateLuma(const Magick::Image &letterImage);
-	wchar_t getLetter();
-	void setLetter(wchar_t l);
+	ImageData(unsigned int c, unsigned int r);
 
-	double getLuma(unsigned int row, unsigned int column);
+	void setCell(unsigned int column, unsigned int row, ImageCell imageCell);
+	void setCell(unsigned int column, unsigned int row, Magick::Color color, wchar_t letter);
+
+	const ASCIIVector& operator[](unsigned row) const
+	{
+		return asciiData[row];
+	}
 };
 
 #endif

@@ -3,8 +3,13 @@ obj/
 *.stash
 *.user
 *.autosave
-*.png
 *.log
+
+*.bmp
+*.png
+*.jpg
+*.jpeg
+*.gif
 
 Makefile
 ASCII
