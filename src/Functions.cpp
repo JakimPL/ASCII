@@ -219,6 +219,23 @@ void Functions::loadOptions()
 	}
 }
 
+Frames Functions::makeASCII(Frames &frames)
+{
+	Frames outputFrames;
+	for (size_t frame = 0; frame < frames.size(); ++frame) {
+		_LogInfo("Image sequence: " + std::to_string(frame + 1) + "/" + std::to_string(frames.size()));
+
+		std::string outputString;
+		Magick::Image image = frames[frame];
+		Magick::Image newImage = Functions::makeASCII(image, outputString);
+		outputFrames.push_back(newImage);
+
+		PRINT("Output:\n" << outputString);
+	}
+
+	return outputFrames;
+}
+
 Magick::Image Functions::makeASCII(Magick::Image &image, std::string &outputString)
 {
 	CharactersData charactersData = Functions::calculateCharactersData();
@@ -264,7 +281,7 @@ wchar_t Functions::matchLetter(const CharactersData &charactersData, const LumaG
 			}
 		}
 
-		if (distance <= minDistance) {
+		if (distance < minDistance) {
 			minDistance = distance;
 			letter = character.first;
 		}
@@ -334,10 +351,30 @@ void Functions::readImage(Magick::Image &image, const std::string &inputPath)
 	}
 }
 
+void Functions::readImages(Frames &frames, const std::string &inputPath)
+{
+	try {
+		Magick::readImages(&frames, inputPath);
+		_LogInfo("Succesfully read " + inputPath + " file");
+	} catch (Magick::Exception &exception) {
+		_LogError(exception.what());
+	}
+}
+
 void Functions::writeImage(Magick::Image &image, const std::string &outputPath)
 {
 	try {
 		image.write(outputPath);
+		_LogInfo("Succesfully saved " + outputPath + " file");
+	} catch (Magick::Exception &exception) {
+		_LogError(exception.what());
+	}
+}
+
+void Functions::writeImages(Frames &frames, const std::string &outputPath)
+{
+	try {
+		Magick::writeImages(frames.begin(), frames.end(), outputPath);
 		_LogInfo("Succesfully saved " + outputPath + " file");
 	} catch (Magick::Exception &exception) {
 		_LogError(exception.what());

@@ -3,10 +3,6 @@
 
 #include <vector>
 
-#include <Magick++/lib/Magick++.h>
-#include <MagickWand/MagickWand.h>
-#include <MagickCore/MagickCore.h>
-
 #include "ImageCell.hpp"
 
 class ImageData

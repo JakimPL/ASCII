@@ -19,12 +19,15 @@ Magick::Image drawOutput(const ImageData &imageData, std::string &outputString);
 Magick::Image getLetterImage(wchar_t letter);
 bpo::variables_map getVariablesMap(bpo::options_description description, int argc, char *argv[]);
 void loadOptions();
+Frames makeASCII(Frames &frames);
 Magick::Image makeASCII(Magick::Image &image, std::string &outputString);
 Magick::Image makeMonochromatic(Magick::Image &image, double threshold = options.image.threshold);
 wchar_t matchLetter(const CharactersData &charactersData, const LumaGrid &lumaGrid);
 int parseProgramArguments(int argc, char *argv[], std::string &inputPath, std::string &outputPath);
 void readImage(Magick::Image &image, const std::string &inputPath);
+void readImages(Frames &frames, const std::string &inputPath);
 void writeImage(Magick::Image &image, const std::string &outputPath);
+void writeImages(Frames &frames, const std::string &outputPath);
 
 inline double getLuminosity(double red, double green, double blue)
 {

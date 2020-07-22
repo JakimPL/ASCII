@@ -12,6 +12,10 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 
+#include <Magick++/lib/Magick++.h>
+#include <MagickWand/MagickWand.h>
+#include <MagickCore/MagickCore.h>
+
 namespace bfs = boost::filesystem;
 namespace bpo = boost::program_options;
 namespace bpt = boost::property_tree;

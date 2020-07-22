@@ -20,5 +20,6 @@ typedef std::vector<Magick::Color> ColorVector;
 typedef std::vector<ColorVector> ColorGrid;
 typedef std::vector<std::pair<Magick::Color, wchar_t>> ASCIIVector;
 typedef std::vector<ASCIIVector> ASCIIData;
+typedef std::vector<Magick::Image> Frames;
 
 #endif

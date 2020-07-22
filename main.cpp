@@ -1,6 +1,4 @@
 #include "main.hpp"
-
-#include "src/Options.hpp"
 #include "src/Functions.hpp"
 
 int main(int argc, char *argv[])
@@ -10,14 +8,10 @@ int main(int argc, char *argv[])
 	int returnValue = Functions::parseProgramArguments(argc, argv, inputPath, outputPath);
 
 	Magick::InitializeMagick(*argv);
-	Magick::Image image;
-
-	std::string outputString;
-	Functions::readImage(image, inputPath);
-	Magick::Image newImage = Functions::makeASCII(image, outputString);
-	Functions::writeImage(newImage, outputPath);
-
-	PRINT("Output:\n" << outputString);
+	Frames frames;
+	Functions::readImages(frames, inputPath);
+	Frames outputFrames = Functions::makeASCII(frames);
+	Functions::writeImages(outputFrames, outputPath);
 
 	return returnValue;
 }
