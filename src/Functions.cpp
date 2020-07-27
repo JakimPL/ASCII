@@ -4,11 +4,12 @@ bpo::options_description Functions::addProgramDescription()
 {
 	bpo::options_description description(HELP);
 	description.add_options()
-	("help,h",                                   "Shows the help message")
-	("version,v",                                "Shows the version of the program")
-	("input,i",       bpo::value<std::string>(), "A path to the input image file")
-	("output,o",      bpo::value<std::string>(), "A path to the output image file")
-	("threshold,t",   bpo::value<double>(),      "The threshold of the algorithm (a value from 0 to 1)");
+	("help,h",                                 "Shows the help message")
+	("version,v",                              "Shows the version of the program")
+	("invert,n",                               "Invert the background (black is default)")
+	("input,i",     bpo::value<std::string>(), "A path to the input image file")
+	("output,o",    bpo::value<std::string>(), "A path to the output image file")
+	("threshold,t", bpo::value<double>(),      "The threshold of the algorithm (a value from 0 to 1)");
 
 	return description;
 }
@@ -147,7 +148,16 @@ std::string Functions::convertCharsToString(const CharactersList &chars)
 Magick::Image Functions::drawOutput(const ImageData &imageData, std::string &outputString)
 {
 	_LogInfo("Creating an output image");
-	Magick::Image newImage(Magick::Geometry(imageData.columns * options.characters.width, imageData.rows * options.characters.height), options.image.backgroundColor);
+	Magick::Color backgroundColor = Magick::Color(options.image.backgroundColor);
+
+	if (options.image.invertBackground) {
+		Magick::Quantum red   = DEPTH - backgroundColor.quantumRed();
+		Magick::Quantum green = DEPTH - backgroundColor.quantumGreen();
+		Magick::Quantum blue  = DEPTH - backgroundColor.quantumBlue();
+		backgroundColor = Magick::Color(red, green, blue);
+	}
+
+	Magick::Image newImage(Magick::Geometry(imageData.columns * options.characters.width, imageData.rows * options.characters.height), backgroundColor);
 	newImage.strokeAntiAlias(options.characters.antialiasing);
 	newImage.fontPointsize(options.characters.size);
 	newImage.font("notomono.ttf");
@@ -258,7 +268,11 @@ Magick::Image Functions::makeMonochromatic(Magick::Image &image, double threshol
 	for (unsigned int x = 0; x < monoImage.columns(); ++x) {
 		for (unsigned int y = 0; y < monoImage.rows(); ++y) {
 			unsigned long position = channels * (x + monoImage.columns() * y);
-			pixels[position] = (pixels[position] > threshold * DEPTH ? DEPTH : 0);
+			if (options.image.invertBackground) {
+				pixels[position] = (pixels[position] <= threshold * DEPTH ? DEPTH : 0);
+			} else {
+				pixels[position] = (pixels[position]  > threshold * DEPTH ? DEPTH : 0);
+			}
 		}
 	}
 
@@ -332,6 +346,10 @@ int Functions::parseProgramArguments(int argc, char *argv[], std::string &inputP
 	if (variablesMap.count("threshold")) {
 		options.image.threshold = variablesMap["threshold"].as<double>();
 		options.image.useMono = true;
+	}
+
+	if (variablesMap.count("invert")) {
+		options.image.invertBackground = true;
 	}
 
 	if (exit) {

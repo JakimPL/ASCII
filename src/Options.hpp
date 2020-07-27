@@ -3,42 +3,45 @@
 
 #include "Types.hpp"
 
-#define COLORS_WEIGHTS_RED      0.30f
-#define COLORS_WEIGHTS_GREEN    0.59f
-#define COLORS_WEIGHTS_BLUE     0.11f
+#define COLORS_WEIGHTS_RED       0.30f
+#define COLORS_WEIGHTS_GREEN     0.59f
+#define COLORS_WEIGHTS_BLUE      0.11f
 
-#define CHARS                   {' ', '.', ':', ';', 'o', 'x', '%', '#', '@'}
-#define CHAR_SIZE               13
-#define CHAR_WIDTH              8
-#define CHAR_HEIGHT             15
-#define CHAR_ANTIALIASING       false
+#define CHARS                    {'.', ':', ';', 'o', 'x', '%', '#', '@'}
+#define CHAR_SIZE                13
+#define CHAR_WIDTH               8
+#define CHAR_HEIGHT              15
+#define CHAR_ANTIALIASING        false
 
-#define IMAGE_BACKGROUND_COLOR "#000000"
-#define IMAGE_USE_MONO          false
-#define IMAGE_THRESHOLD         0.5f
+#define IMAGE_BACKGROUND_COLOR   "#000000"
+#define IMAGE_INVERT_BACKGROUND  true
+#define IMAGE_USE_MONO           false
+#define IMAGE_THRESHOLD          0.5f
 
-#define REGION_COLUMNS          3
-#define REGION_ROWS             4
+#define REGION_COLUMNS           3
+#define REGION_ROWS              4
 
-#define DEPTH                   65536
+#define DEPTH                    65536
+#define WHITE                    "#FFFFFF"
 
 struct Options {
-	Color  colorsWeights               = {COLORS_WEIGHTS_RED, COLORS_WEIGHTS_GREEN, COLORS_WEIGHTS_BLUE};
+	Color  colorsWeights                = {COLORS_WEIGHTS_RED, COLORS_WEIGHTS_GREEN, COLORS_WEIGHTS_BLUE};
 	struct Characters {
-		CharactersList chars           = CHARS;
-		unsigned short size            = CHAR_SIZE;
-		unsigned short width           = CHAR_WIDTH;
-		unsigned short height          = CHAR_HEIGHT;
-		bool           antialiasing    = CHAR_ANTIALIASING;
+		CharactersList chars            = CHARS;
+		unsigned short size             = CHAR_SIZE;
+		unsigned short width            = CHAR_WIDTH;
+		unsigned short height           = CHAR_HEIGHT;
+		bool           antialiasing     = CHAR_ANTIALIASING;
 	} characters;
 	struct Image {
-		std::string    backgroundColor = IMAGE_BACKGROUND_COLOR;
-		bool           useMono         = IMAGE_USE_MONO;
-		double         threshold       = IMAGE_THRESHOLD;
+		std::string    backgroundColor  = IMAGE_BACKGROUND_COLOR;
+		bool           invertBackground = IMAGE_INVERT_BACKGROUND;
+		bool           useMono          = IMAGE_USE_MONO;
+		double         threshold        = IMAGE_THRESHOLD;
 	} image;
 	struct Regions {
-		unsigned long  columns         = REGION_COLUMNS;
-		unsigned long  rows            = REGION_ROWS;
+		unsigned long  columns          = REGION_COLUMNS;
+		unsigned long  rows             = REGION_ROWS;
 	} regions;
 
 	void save(const std::string &filename);
